@@ -52,6 +52,29 @@ void UFragmentModelWrapper::ClearRelationIndex()
 {
 	LocalIdToRelationRows.Empty();
 	bRelationIndexReady = false;
+	AttributeQueryCache.Empty();
+	LocalIdToStoreyName.Empty();
+	bStoreyNamesReady = false;
+}
+
+const TArray<int64>* UFragmentModelWrapper::FindAttributeQuery(const FString& Key) const
+{
+	return AttributeQueryCache.Find(Key);
+}
+
+void UFragmentModelWrapper::RememberAttributeQuery(const FString& Key, TArray<int64> Ids)
+{
+	if (AttributeQueryCache.Num() >= 16)
+	{
+		AttributeQueryCache.Empty();
+	}
+	AttributeQueryCache.Add(Key, MoveTemp(Ids));
+}
+
+void UFragmentModelWrapper::SetStoreyNames(TMap<int64, FString> Names)
+{
+	LocalIdToStoreyName = MoveTemp(Names);
+	bStoreyNamesReady = true;
 }
 
 void UFragmentModelWrapper::EnsureRelationIndex()

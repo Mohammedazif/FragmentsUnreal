@@ -60,6 +60,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Fragments")
 	TArray<int64> GetElementsByCategory(const FString& InCategory, const FString& ModelGuid);
 
+	/** Local ids whose attribute or property set matches. An empty value matches every item that has the name. */
+	UFUNCTION(BlueprintCallable, Category = "Fragments")
+	TArray<int64> FindItemsByAttribute(const FString& ModelGuid, const FString& AttributeName, const FString& AttributeValue, bool bExactMatch = true);
+
+	/** The storey and every item whose containment chain reaches that storey. Two storeys with the same name both match. */
+	UFUNCTION(BlueprintCallable, Category = "Fragments")
+	TArray<int64> FindItemsByStorey(const FString& ModelGuid, const FString& StoreyName);
+
+	UFUNCTION(BlueprintCallable, Category = "Fragments")
+	TMap<FString, int32> GetCategoryCounts(const FString& ModelGuid);
+
+	UFUNCTION(BlueprintCallable, Category = "Fragments")
+	TMap<FString, int32> GetStoreyCounts(const FString& ModelGuid);
+
 	UFUNCTION(BlueprintCallable, Category = "Fragments")
 	AFragment* GetItemByLocalId(int64 InLocalId, const FString& InModelGuid);
 

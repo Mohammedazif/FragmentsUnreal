@@ -60,6 +60,18 @@ public:
 	TArray<int64> GetElementsByCategory(const FString& InCategory, const FString& ModelGuid);
 
 	UFUNCTION(BlueprintCallable, Category = "Fragments|Editor")
+	TArray<int64> FindItemsByAttribute(const FString& ModelGuid, const FString& AttributeName, const FString& AttributeValue, bool bExactMatch = true);
+
+	UFUNCTION(BlueprintCallable, Category = "Fragments|Editor")
+	TArray<int64> FindItemsByStorey(const FString& ModelGuid, const FString& StoreyName);
+
+	UFUNCTION(BlueprintCallable, Category = "Fragments|Editor")
+	TMap<FString, int32> GetCategoryCounts(const FString& ModelGuid);
+
+	UFUNCTION(BlueprintCallable, Category = "Fragments|Editor")
+	TMap<FString, int32> GetStoreyCounts(const FString& ModelGuid);
+
+	UFUNCTION(BlueprintCallable, Category = "Fragments|Editor")
 	AFragment* GetItemByLocalId(int64 InLocalId, const FString& InModelGuid);
 
 	FFragmentItem* GetFragmentItemByLocalId(int64 InLocalId, const FString& InModelGuid);

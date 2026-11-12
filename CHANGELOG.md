@@ -12,6 +12,14 @@
   element type when the file has them. Relations such as openings, fills and
   nests are no longer copied onto the element as properties.
 
+### Added
+
+- `FindItemsByAttribute` and `FindItemsByStorey` return local ids.
+  `GetCategoryCounts` and `GetStoreyCounts` return the totals. The attribute
+  name is compared without case. An empty value matches every element that has
+  that attribute. A storey match includes the storey itself and the elements
+  contained in it. Two storeys that share a name both match.
+
 ## [1.0.0] - 2026-10-23
 
 Initial open-source release.

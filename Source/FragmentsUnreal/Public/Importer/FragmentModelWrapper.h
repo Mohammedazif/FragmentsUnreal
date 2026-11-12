@@ -51,6 +51,9 @@ private:
 	TMap<int64, FFragmentItem*> LocalIdToItem;
 	TMap<int64, TArray<int32>> LocalIdToRelationRows;
 	bool bRelationIndexReady = false;
+	TMap<FString, TArray<int64>> AttributeQueryCache;
+	TMap<int64, FString> LocalIdToStoreyName;
+	bool bStoreyNamesReady = false;
 
 
 public:
@@ -88,6 +91,12 @@ public:
 	void EnsureRelationIndex();
 	void ClearRelationIndex();
 	const TArray<int32>* FindRelationRows(int64 LocalId) const;
+
+	const TArray<int64>* FindAttributeQuery(const FString& Key) const;
+	void RememberAttributeQuery(const FString& Key, TArray<int64> Ids);
+	bool HasStoreyNames() const { return bStoreyNamesReady; }
+	const TMap<int64, FString>& GetStoreyNames() const { return LocalIdToStoreyName; }
+	void SetStoreyNames(TMap<int64, FString> Names);
 
 	/** LocalId → hierarchy item. */
 	FFragmentItem* FindItemByLocalId(int64 LocalId);

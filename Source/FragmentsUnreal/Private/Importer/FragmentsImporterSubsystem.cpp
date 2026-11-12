@@ -127,6 +127,30 @@ TArray<int64> UFragmentsImporterSubsystem::GetElementsByCategory(const FString& 
     return Importer->GetElementsByCategory(InCategory, ModelGuid);
 }
 
+TArray<int64> UFragmentsImporterSubsystem::FindItemsByAttribute(const FString& ModelGuid, const FString& AttributeName, const FString& AttributeValue, bool bExactMatch)
+{
+    check(Importer);
+    return Importer->FindItemsByAttribute(ModelGuid, AttributeName, AttributeValue, bExactMatch);
+}
+
+TArray<int64> UFragmentsImporterSubsystem::FindItemsByStorey(const FString& ModelGuid, const FString& StoreyName)
+{
+    check(Importer);
+    return Importer->FindItemsByStorey(ModelGuid, StoreyName);
+}
+
+TMap<FString, int32> UFragmentsImporterSubsystem::GetCategoryCounts(const FString& ModelGuid)
+{
+    check(Importer);
+    return Importer->GetCategoryCounts(ModelGuid);
+}
+
+TMap<FString, int32> UFragmentsImporterSubsystem::GetStoreyCounts(const FString& ModelGuid)
+{
+    check(Importer);
+    return Importer->GetStoreyCounts(ModelGuid);
+}
+
 AFragment* UFragmentsImporterSubsystem::GetItemByLocalId(int64 InLocalId, const FString& InModelGuid)
 {
     check(Importer);

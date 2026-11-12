@@ -457,3 +457,209 @@ FGatheredElement UE::Fragments::Metadata::Gather(UFragmentModelWrapper* Wrapper,
 
 	return Result;
 }
+
+namespace
+{
+	bool ValueMatches(const FString& Have, const FString& Want, bool bExactMatch)
+	{
+		if (Want.IsEmpty())
+		{
+			return true;
+		}
+		return bExactMatch
+			? Have.Equals(Want, ESearchCase::IgnoreCase)
+			: Have.Contains(Want, ESearchCase::IgnoreCase);
+	}
+
+	bool RowMatches(const FItemAttribute& Row, const FString& Name, const FString& Value, bool bExactMatch)
+	{
+		return Row.Key.Equals(Name, ESearchCase::IgnoreCase) && ValueMatches(Row.Value, Value, bExactMatch);
+	}
+
+	FString StoreyNameFor(UFragmentModelWrapper* Wrapper, int64 StartId)
+	{
+		int64 Current = StartId;
+		TSet<int64> Seen;
+		for (int32 Step = 0; Step < 8 && Current >= 0 && !Seen.Contains(Current); ++Step)
+		{
+			Seen.Add(Current);
+			if (CategoryOf(Wrapper, Current).Equals(TEXT("IFCBUILDINGSTOREY"), ESearchCase::IgnoreCase))
+			{
+				return ItemName(AttributesOf(Wrapper, Current), FString());
+			}
+			const TArray<FRelation> Relations = RelationsOf(Wrapper, Current);
+			int64 Next = INDEX_NONE;
+			for (const FRelation& Relation : Relations)
+			{
+				if (Relation.Name.Equals(TEXT("ContainedInStructure"), ESearchCase::IgnoreCase) && Relation.Targets.Num() > 0)
+				{
+					Next = Relation.Targets[0];
+					break;
+				}
+			}
+			if (Next == INDEX_NONE)
+			{
+				for (const FRelation& Relation : Relations)
+				{
+					if (Relation.Name.Equals(TEXT("Decomposes"), ESearchCase::IgnoreCase) && Relation.Targets.Num() > 0)
+					{
+						Next = Relation.Targets[0];
+						break;
+					}
+				}
+			}
+			if (Next == INDEX_NONE)
+			{
+				break;
+			}
+			Current = Next;
+		}
+		return FString();
+	}
+
+	const TMap<int64, FString>& EnsureStoreyNames(UFragmentModelWrapper* Wrapper)
+	{
+		if (!Wrapper->HasStoreyNames())
+		{
+			TMap<int64, FString> Names;
+			const Model* Parsed = Wrapper->GetParsedModel();
+			if (Parsed && Parsed->local_ids())
+			{
+				const auto* LocalIds = Parsed->local_ids();
+				Names.Reserve(LocalIds->size());
+				for (flatbuffers::uoffset_t Index = 0; Index < LocalIds->size(); ++Index)
+				{
+					const int64 LocalId = LocalIds->Get(Index);
+					const FString Name = StoreyNameFor(Wrapper, LocalId);
+					if (!Name.IsEmpty())
+					{
+						Names.Add(LocalId, Name);
+					}
+				}
+			}
+			Wrapper->SetStoreyNames(MoveTemp(Names));
+		}
+		return Wrapper->GetStoreyNames();
+	}
+}
+
+TArray<int64> UE::Fragments::Metadata::FindItemsByAttribute(
+	UFragmentModelWrapper* Wrapper, const FString& AttributeName, const FString& AttributeValue, bool bExactMatch)
+{
+	TArray<int64> Found;
+	if (!Wrapper || !Wrapper->GetParsedModel() || !Wrapper->GetParsedModel()->local_ids() || AttributeName.IsEmpty())
+	{
+		return Found;
+	}
+
+	const FString CacheKey = AttributeName + TEXT("\x1f") + AttributeValue + TEXT("\x1f") + (bExactMatch ? TEXT("1") : TEXT("0"));
+	if (const TArray<int64>* Cached = Wrapper->FindAttributeQuery(CacheKey))
+	{
+		return *Cached;
+	}
+
+	const auto* LocalIds = Wrapper->GetParsedModel()->local_ids();
+	for (flatbuffers::uoffset_t Index = 0; Index < LocalIds->size(); ++Index)
+	{
+		const int64 LocalId = LocalIds->Get(Index);
+		bool bMatched = false;
+		for (const FItemAttribute& Attribute : AttributesOf(Wrapper, LocalId))
+		{
+			if (RowMatches(Attribute, AttributeName, AttributeValue, bExactMatch))
+			{
+				bMatched = true;
+				break;
+			}
+		}
+		if (!bMatched)
+		{
+			bool bHasSets = false;
+			for (const FRelation& Relation : RelationsOf(Wrapper, LocalId))
+			{
+				if (Relation.Name == RelIsDefinedBy || Relation.Name == RelHasPropertySets)
+				{
+					bHasSets = true;
+					break;
+				}
+			}
+			if (bHasSets)
+			{
+				const FGatheredElement Gathered = Gather(Wrapper, LocalId);
+				for (const FFragmentPropertySetGroup& Set : Gathered.Sets)
+				{
+					for (const FItemAttribute& Row : Set.Rows)
+					{
+						if (RowMatches(Row, AttributeName, AttributeValue, bExactMatch))
+						{
+							bMatched = true;
+							break;
+						}
+					}
+					if (bMatched)
+					{
+						break;
+					}
+				}
+			}
+		}
+		if (bMatched)
+		{
+			Found.Add(LocalId);
+		}
+	}
+
+	Wrapper->RememberAttributeQuery(CacheKey, Found);
+	return Found;
+}
+
+TArray<int64> UE::Fragments::Metadata::FindItemsByStorey(UFragmentModelWrapper* Wrapper, const FString& StoreyName)
+{
+	TArray<int64> Found;
+	if (!Wrapper || StoreyName.IsEmpty())
+	{
+		return Found;
+	}
+	for (const TPair<int64, FString>& Pair : EnsureStoreyNames(Wrapper))
+	{
+		if (Pair.Value.Equals(StoreyName, ESearchCase::IgnoreCase))
+		{
+			Found.Add(Pair.Key);
+		}
+	}
+	return Found;
+}
+
+TMap<FString, int32> UE::Fragments::Metadata::GetCategoryCounts(UFragmentModelWrapper* Wrapper)
+{
+	TMap<FString, int32> Counts;
+	const Model* Parsed = Wrapper ? Wrapper->GetParsedModel() : nullptr;
+	if (!Parsed || !Parsed->categories())
+	{
+		return Counts;
+	}
+	const auto* Categories = Parsed->categories();
+	for (flatbuffers::uoffset_t Index = 0; Index < Categories->size(); ++Index)
+	{
+		const auto* Category = Categories->Get(Index);
+		if (!Category || Category->size() == 0)
+		{
+			continue;
+		}
+		Counts.FindOrAdd(FString(UTF8_TO_TCHAR(Category->c_str())))++;
+	}
+	return Counts;
+}
+
+TMap<FString, int32> UE::Fragments::Metadata::GetStoreyCounts(UFragmentModelWrapper* Wrapper)
+{
+	TMap<FString, int32> Counts;
+	if (!Wrapper)
+	{
+		return Counts;
+	}
+	for (const TPair<int64, FString>& Pair : EnsureStoreyNames(Wrapper))
+	{
+		Counts.FindOrAdd(Pair.Value)++;
+	}
+	return Counts;
+}

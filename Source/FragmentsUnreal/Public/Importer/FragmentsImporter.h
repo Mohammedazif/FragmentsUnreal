@@ -119,6 +119,10 @@ public:
 	void ProcessLoadedFragmentItem(int64 InLocalId, const FString& InModelGuid, AActor* InOwnerRef, bool bInSaveMesh,
 		AFragment* BucketRoot = nullptr);
 	TArray<int64> GetElementsByCategory(const FString& InCategory, const FString& ModelGuid);
+	TArray<int64> FindItemsByAttribute(const FString& ModelGuid, const FString& AttributeName, const FString& AttributeValue, bool bExactMatch = true);
+	TArray<int64> FindItemsByStorey(const FString& ModelGuid, const FString& StoreyName);
+	TMap<FString, int32> GetCategoryCounts(const FString& ModelGuid);
+	TMap<FString, int32> GetStoreyCounts(const FString& ModelGuid);
 	void UnloadFragment(const FString& ModelGuid);
 
 	/** Cancel tracking of in-flight LOD2 proxy build tasks for a model. */

@@ -1700,6 +1700,42 @@ TArray<int64> UFragmentsImporter::GetElementsByCategory(const FString& InCategor
 	return LocalIds;
 }
 
+TArray<int64> UFragmentsImporter::FindItemsByAttribute(const FString& ModelGuid, const FString& AttributeName, const FString& AttributeValue, bool bExactMatch)
+{
+	if (UFragmentModelWrapper* const* Found = FragmentModels.Find(ModelGuid))
+	{
+		return UE::Fragments::Metadata::FindItemsByAttribute(*Found, AttributeName, AttributeValue, bExactMatch);
+	}
+	return TArray<int64>();
+}
+
+TArray<int64> UFragmentsImporter::FindItemsByStorey(const FString& ModelGuid, const FString& StoreyName)
+{
+	if (UFragmentModelWrapper* const* Found = FragmentModels.Find(ModelGuid))
+	{
+		return UE::Fragments::Metadata::FindItemsByStorey(*Found, StoreyName);
+	}
+	return TArray<int64>();
+}
+
+TMap<FString, int32> UFragmentsImporter::GetCategoryCounts(const FString& ModelGuid)
+{
+	if (UFragmentModelWrapper* const* Found = FragmentModels.Find(ModelGuid))
+	{
+		return UE::Fragments::Metadata::GetCategoryCounts(*Found);
+	}
+	return TMap<FString, int32>();
+}
+
+TMap<FString, int32> UFragmentsImporter::GetStoreyCounts(const FString& ModelGuid)
+{
+	if (UFragmentModelWrapper* const* Found = FragmentModels.Find(ModelGuid))
+	{
+		return UE::Fragments::Metadata::GetStoreyCounts(*Found);
+	}
+	return TMap<FString, int32>();
+}
+
 void UFragmentsImporter::PurgeInFlightShellBuildsForModel(const FString& ModelGuid)
 {
 	check(IsInGameThread());
