@@ -32,6 +32,7 @@
 #include "Curve/PolygonIntersectionUtils.h"
 #include "Utils/FragmentOcclusionClassifier.h"
 #include "Utils/FragmentClassification.h"
+#include "Utils/FragmentColor.h"
 #include "Utils/FragmentCellPartition.h"
 #include "Utils/BudgetDrain.h"
 #include "CompGeom/PolygonTriangulation.h"
@@ -2371,7 +2372,7 @@ AFragment* UFragmentsImporter::SpawnFragmentModel(FFragmentItem InFragmentItem, 
 			{
 				UMaterialInterface* BaseMat = (A < 255) ? BaseGlassMaterial.Get() : BaseMaterial.Get();
 				UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMat, BucketRoot);
-				MID->SetVectorParameterValue(TEXT("BaseColor"), FLinearColor(R / 255.f, G / 255.f, B / 255.f, A / 255.f));
+				MID->SetVectorParameterValue(TEXT("BaseColor"), UE::Fragments::Color::BaseColorFromSrgbBytes(R, G, B, A));
 				if (A < 255) MID->SetScalarParameterValue(TEXT("Opacity"), A / 255.f);
 				InWrapperRef->GetMaterialsMap().Add(Sample.MaterialIndex, MID);
 				MatIF = MID;
@@ -5032,7 +5033,8 @@ FName UFragmentsImporter::AddMaterialToMesh(UStaticMesh*& CreatedMesh, const Mat
 			UPackage* MaterialPackage = CreatePackage(*PackagePath);
 			MaterialInstance = NewObject<UMaterialInstanceConstant>(UMaterialInstanceConstant::StaticClass());
 			MaterialInstance->SetParentEditorOnly(BaseMat);
-			MaterialInstance->SetVectorParameterValueEditorOnly(TEXT("BaseColor"), FLinearColor(R, G, B, A));
+			MaterialInstance->SetVectorParameterValueEditorOnly(TEXT("BaseColor"), UE::Fragments::Color::BaseColorFromSrgbBytes(
+				RefMaterial->r(), RefMaterial->g(), RefMaterial->b(), RefMaterial->a()));
 			if (bHasTransparency)
 			{
 				MaterialInstance->SetScalarParameterValueEditorOnly(TEXT("Opacity"), A);
@@ -5486,16 +5488,13 @@ UMaterialInstanceDynamic* UFragmentsImporter::GetPooledMaterial(uint8 R, uint8 G
 		return nullptr;
 	}
 
-	float Rf = R / 255.f;
-	float Gf = G / 255.f;
-	float Bf = B / 255.f;
-	float Af = A / 255.f;
+	const float Af = A / 255.f;
 
 	if (Af < 1.0f)
 	{
 		NewMat->SetScalarParameterValue(TEXT("Opacity"), Af);
 	}
-	NewMat->SetVectorParameterValue(TEXT("BaseColor"), FVector4(Rf, Gf, Bf, Af));
+	NewMat->SetVectorParameterValue(TEXT("BaseColor"), UE::Fragments::Color::BaseColorFromSrgbBytes(R, G, B, A));
 
 	MaterialPool.Add(Hash, NewMat);
 	return NewMat;

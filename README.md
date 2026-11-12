@@ -81,6 +81,13 @@ one C++ class first (Tools → New C++ Class) so Unreal creates a build target.
 The [getting started guide](https://www.fragmentsunreal.dev/docs/getting-started)
 walks through each step with screenshots, plus the Blueprint runtime path.
 
+Material colours in a `.frag` file are sRGB. The plugin converts them to linear
+before setting `BaseColor`, so an import matches the That Open viewer. Opacity
+is left as it is. Assets already saved under `/Game/Buildings` with names like
+`mat_R_G_B_A` are reused and keep the colour they were saved with. Delete
+`/Game/Buildings/mat_*` and import the model again to correct them. Deleting
+those assets also removes any colour you changed on them by hand.
+
 ---
 
 ## 📚 Documentation

@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Base colours read from a `.frag` material are converted from sRGB to linear
+  before they are written to the `BaseColor` parameter. Imported models look
+  darker and more saturated. Opacity is unchanged.
+- Material instances already saved as `/Game/Buildings/mat_*` keep their old
+  colour. Delete those assets and import the model again to update them.
+
 ## [1.0.0] - 2026-10-23
 
 Initial open-source release.
