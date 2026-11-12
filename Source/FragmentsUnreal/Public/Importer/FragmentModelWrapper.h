@@ -49,6 +49,8 @@ private:
 	/** Lazy lookup caches; cleared by ResetWrapper. */
 	TMap<int64, int32> LocalIdToFlatIndex;
 	TMap<int64, FFragmentItem*> LocalIdToItem;
+	TMap<int64, TArray<int32>> LocalIdToRelationRows;
+	bool bRelationIndexReady = false;
 
 
 public:
@@ -62,6 +64,7 @@ public:
 		ParsedModel = IsValidModelBuffer(*RawBuffer) ? GetModel(RawBuffer->GetData()) : nullptr;
 		LocalIdToFlatIndex.Empty();
 		LocalIdToItem.Empty();
+		ClearRelationIndex();
 	}
 
 	/** Shared handle to the raw buffer; capture into worker tasks that read FlatBuffer pointers (Shell*, Material*) off the game thread. */
@@ -80,6 +83,11 @@ public:
 
 	/** LocalId → FlatBuffer item index. */
 	int64 GetFlatIndexForLocalId(int64 LocalId);
+
+	/** Owner local id → relation-table rows. Built on first use. */
+	void EnsureRelationIndex();
+	void ClearRelationIndex();
+	const TArray<int32>* FindRelationRows(int64 LocalId) const;
 
 	/** LocalId → hierarchy item. */
 	FFragmentItem* FindItemByLocalId(int64 LocalId);

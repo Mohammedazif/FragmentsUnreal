@@ -504,7 +504,6 @@ private:
 
 	/** Drops ModelGuid's waiters from InFlightShellBuilds without touching any other resident model's entries. */
 	void PurgeInFlightShellBuildsForModel(const FString& ModelGuid);
-	void CollectPropertiesRecursive(const Model* InModel, int64 StartLocalId, TSet<int64>& Visited, TArray<FItemAttribute>& OutAttributes);
 	void SpawnStaticMesh(UStaticMesh* StaticMesh, const Transform* LocalTransform, const Transform* GlobalTransform, AActor* Owner, FName OptionalTag = FName());
 
 	// Unified SpawnFragmentModel — recursive HISM spawn with optional BucketRoot reuse.

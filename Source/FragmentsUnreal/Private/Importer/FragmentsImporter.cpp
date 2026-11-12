@@ -32,6 +32,7 @@
 #include "Curve/PolygonIntersectionUtils.h"
 #include "Utils/FragmentOcclusionClassifier.h"
 #include "Utils/FragmentClassification.h"
+#include "Utils/FragmentMetadata.h"
 #include "Utils/FragmentCellPartition.h"
 #include "Utils/BudgetDrain.h"
 #include "CompGeom/PolygonTriangulation.h"
@@ -734,54 +735,37 @@ void UFragmentsImporter::GetItemData(FFragmentItem* InFragmentItem)
 	}
 }
 
+namespace
+{
+	TArray<FItemAttribute> FlattenPropertySets(const TArray<FFragmentPropertySetGroup>& Sets)
+	{
+		TArray<FItemAttribute> Rows;
+		for (const FFragmentPropertySetGroup& Set : Sets)
+		{
+			Rows.Append(Set.Rows);
+		}
+		return Rows;
+	}
+}
+
 TArray<FItemAttribute> UFragmentsImporter::GetItemPropertySets(AFragment* InFragment)
 {
-	TArray<FItemAttribute> CollectedAttributes;
-	if (!InFragment || InFragment->GetModelGuid().IsEmpty()) return CollectedAttributes;
-	if (!FragmentModels.Contains(InFragment->GetModelGuid())) return CollectedAttributes;
-
-	UFragmentModelWrapper* Wrapper = *FragmentModels.Find(InFragment->GetModelGuid());
-	const Model* InModel = Wrapper->GetParsedModel();
-	if (!InModel) return CollectedAttributes;
-
-	TSet<int64> Visited;
-	CollectPropertiesRecursive(InModel, InFragment->GetLocalId(), Visited, CollectedAttributes);
-
-	return UFragmentsUtils::ParsePropertySets(CollectedAttributes);
+	if (!InFragment) return {};
+	return GetItemPropertySets(InFragment->GetLocalId(), InFragment->GetModelGuid());
 }
 
 TArray<FItemAttribute> UFragmentsImporter::GetItemPropertySets(FFragmentItem* InFragment)
 {
-	TArray<FItemAttribute> CollectedAttributes;
-	if (!InFragment || InFragment->ModelGuid.IsEmpty()) return CollectedAttributes;
-	if (!FragmentModels.Contains(InFragment->ModelGuid)) return CollectedAttributes;
-
-	UFragmentModelWrapper* Wrapper = *FragmentModels.Find(InFragment->ModelGuid);
-	const Model* InModel = Wrapper->GetParsedModel();
-	if (!InModel) return CollectedAttributes;
-
-	TSet<int64> Visited;
-	CollectPropertiesRecursive(InModel, InFragment->LocalId, Visited, CollectedAttributes);
-
-	return UFragmentsUtils::ParsePropertySets(CollectedAttributes);
+	if (!InFragment) return {};
+	return GetItemPropertySets(InFragment->LocalId, InFragment->ModelGuid);
 }
 
 TArray<FItemAttribute> UFragmentsImporter::GetItemPropertySets(int64 LocalId, const FString& InModelGuid)
 {
-	TArray<FItemAttribute> CollectedAttributes;
-	if (InModelGuid.IsEmpty()) return CollectedAttributes;
-	if (!FragmentModels.Contains(InModelGuid)) return CollectedAttributes;
-
+	if (InModelGuid.IsEmpty() || !FragmentModels.Contains(InModelGuid)) return {};
 	UFragmentModelWrapper* Wrapper = *FragmentModels.Find(InModelGuid);
-	if (!Wrapper) return CollectedAttributes;
-
-	const Model* InModel = Wrapper->GetParsedModel();
-	if (!InModel) return CollectedAttributes;
-
-	TSet<int64> Visited;
-	CollectPropertiesRecursive(InModel, LocalId, Visited, CollectedAttributes);
-
-	return UFragmentsUtils::ParsePropertySets(CollectedAttributes);
+	if (!Wrapper) return {};
+	return FlattenPropertySets(UE::Fragments::Metadata::Gather(Wrapper, LocalId).Sets);
 }
 
 TArray<FItemAttribute> UFragmentsImporter::GetItemAttributes(int64 LocalId, const FString& InModelGuid)
@@ -1870,75 +1854,6 @@ void UFragmentsImporter::UnloadFragment(const FString& ModelGuid)
 {
 	PurgeModelState(ModelGuid, /*bRemoveFromMap=*/true);
 }
-
-void UFragmentsImporter::CollectPropertiesRecursive(
-	const Model* InModel,
-	int64 StartLocalId,
-	TSet<int64>& Visited,
-	TArray<FItemAttribute>& OutAttributes)
-{
-	if (!InModel || Visited.Contains(StartLocalId)) return;
-	Visited.Add(StartLocalId);
-
-	const auto* relations = InModel->relations();
-	const auto* attributes = InModel->attributes();
-	const auto* relations_items = InModel->relations_items();
-
-	for (flatbuffers::uoffset_t i = 0; i < relations_items->size(); i++)
-	{
-		if (relations_items->Get(i) != StartLocalId) continue;
-
-		const auto* Relation = relations->Get(i);
-		if (!Relation || !Relation->data()) continue;
-
-		for (flatbuffers::uoffset_t j = 0; j < Relation->data()->size(); j++)
-		{
-			const char* RawStr = Relation->data()->Get(j)->c_str();
-			FString Cleaned = UTF8_TO_TCHAR(RawStr);
-
-			TArray<FString> Tokens;
-			Cleaned.Replace(TEXT("["), TEXT(""))
-				.Replace(TEXT("]"), TEXT(""))
-				.ParseIntoArray(Tokens, TEXT(","), true);
-
-			if (Tokens.Num() < 2) continue;
-
-			FString RelationName = Tokens[0].TrimStartAndEnd().Replace(TEXT("\""), TEXT(""));
-
-			// Follow property-related and classification relations (skip purely spatial/geometric ones)
-			static const TSet<FString> AllowedRelations = {
-				TEXT("IsDefinedBy"), TEXT("HasProperties"), TEXT("DefinesType"),
-				TEXT("HasAssociations"), TEXT("HasAssignments"), TEXT("IsTypedBy"),
-				TEXT("HasContext"), TEXT("Declares"), TEXT("Nests"),
-				TEXT("HasOpenings"), TEXT("FillsVoids")
-			};
-			if (!AllowedRelations.Contains(RelationName))
-				continue;
-
-			for (int32 k = 1; k < Tokens.Num(); ++k)
-			{
-				int64 RelatedLocalId = FCString::Atoi64(*Tokens[k].TrimStartAndEnd());
-				if (Visited.Contains(RelatedLocalId)) continue;
-
-				// Try resolving RelatedLocalId to attribute
-				flatbuffers::uoffset_t AttrIndex = UFragmentsUtils::GetIndexForLocalId(InModel, RelatedLocalId);
-				if (AttrIndex != INDEX_NONE && attributes && AttrIndex < attributes->size())
-				{
-					const auto* Attr = attributes->Get(AttrIndex);
-					if (Attr)
-					{
-						TArray<FItemAttribute> Props = UFragmentsUtils::ParseItemAttribute(Attr);
-						OutAttributes.Append(Props);
-					}
-				}
-
-				// Recurse
-				CollectPropertiesRecursive(InModel, RelatedLocalId, Visited, OutAttributes);
-			}
-		}
-	}
-}
-
 
 void UFragmentsImporter::SpawnStaticMesh(UStaticMesh* StaticMesh,const Transform* LocalTransform, const Transform* GlobalTransform, AActor* Owner, FName OptionalTag)
 {

@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Element property queries read the real IFC property sets on demand. A comma
+  inside a quoted value stays one value, and type codes larger than 32 bits
+  keep their full value. Sets inherited from a type are marked, and quantity
+  sets are marked separately.
+- `GetElementDetail` also returns material layers, classifications, and the
+  element type when the file has them. Relations such as openings, fills and
+  nests are no longer copied onto the element as properties.
+
 ## [1.0.0] - 2026-10-23
 
 Initial open-source release.

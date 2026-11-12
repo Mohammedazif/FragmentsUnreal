@@ -7,6 +7,7 @@
 #include "Importer/FragmentsImporter.h"
 #include "Importer/FragmentModelWrapper.h"
 #include "Utils/FragmentsUtils.h"
+#include "Utils/FragmentMetadata.h"
 #include "Utils/FragmentsLog.h"
 #include "Index/FragmentsSchema.h"
 #include "Spatial/FragmentRegistrationManager.h"
@@ -237,28 +238,19 @@ FFragmentElementDetail UFragmentsImporterSubsystem::GetElementDetail(int64 Local
     Detail.Category = Item->Category;
     Detail.ModelGuid = Item->ModelGuid;
     Detail.Attributes = GetItemAttributes(LocalId, ModelGuid);
-    Detail.PropertySets = GetItemPropertySets(LocalId, ModelGuid);
 
-    // Pre-group property-set attributes by set name (first-seen order) so Blueprint can loop groups directly — BP TMap can't hold array values, so we group here.
+    if (UFragmentModelWrapper* Wrapper = GetModelWrapper(ModelGuid))
     {
-        TMap<FString, int32> GroupIndex;
-        for (const FItemAttribute& Attr : Detail.PropertySets)
+        const UE::Fragments::Metadata::FGatheredElement Gathered = UE::Fragments::Metadata::Gather(Wrapper, LocalId);
+        Detail.PropertySetGroups = Gathered.Sets;
+        for (const FFragmentPropertySetGroup& Set : Gathered.Sets)
         {
-            int32 Idx;
-            if (const int32* Found = GroupIndex.Find(Attr.PropertySet))
-            {
-                Idx = *Found;
-            }
-            else
-            {
-                Idx = Detail.PropertySetGroups.Num();
-                GroupIndex.Add(Attr.PropertySet, Idx);
-                FFragmentPropertySetGroup NewGroup;
-                NewGroup.Name = Attr.PropertySet;
-                Detail.PropertySetGroups.Add(MoveTemp(NewGroup));
-            }
-            Detail.PropertySetGroups[Idx].Rows.Add(Attr);
+            Detail.PropertySets.Append(Set.Rows);
         }
+        Detail.Materials = Gathered.Materials;
+        Detail.Classifications = Gathered.Classifications;
+        Detail.TypeName = Gathered.TypeName;
+        Detail.TypeLocalId = Gathered.TypeLocalId;
     }
 
     // Name lives in IFC attributes (Key == "Name"); reuse already-fetched attributes.

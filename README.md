@@ -30,7 +30,9 @@ Targets Unreal Engine 5.4 and later. No Nanite required.
 **BIM data and visualization**
 
 - 🔎 Metadata queries from Blueprint: categories, attributes, property sets,
-  element info and model metadata
+  element info and model metadata. Property sets are the IFC sets on that
+  element, including a type's sets when the file has them. Material layers and
+  classifications are on `GetElementDetail`
 - 🧱 Floor visibility ranges, category filters, ghosting and x-ray views
 - 🎯 Element selection at any distance: `SelectAtScreenPos` promotes the model
   through its LOD tiers until it finds the element under the cursor

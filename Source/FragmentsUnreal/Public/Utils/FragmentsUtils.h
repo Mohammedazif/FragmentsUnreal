@@ -271,6 +271,10 @@ struct FItemAttribute
 	UPROPERTY(BlueprintReadOnly, Category = "Fragments")
 	int64 TypeHash;
 
+	/** True when this row was inherited from the element's type. */
+	UPROPERTY(BlueprintReadOnly, Category = "Fragments")
+	bool bFromType = false;
+
 	FItemAttribute() : Key(TEXT("")), Value(TEXT("")), PropertySet(TEXT("")), TypeHash(0) {}
 	FItemAttribute(const FString& InKey, const FString& InValue, const FString& InPropertySet, int64 InTypeHash)
 		:Key(InKey), Value(InValue), PropertySet(InPropertySet), TypeHash(InTypeHash) {}
@@ -289,6 +293,51 @@ struct FFragmentPropertySetGroup
 
 	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
 	TArray<FItemAttribute> Rows;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	bool bFromType = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	bool bIsQuantitySet = false;
+
+	/** Local id of the IFC property set or quantity set. */
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	int64 LocalId = -1;
+};
+
+/** One layer or direct material reached from HasAssociations. */
+USTRUCT(BlueprintType)
+struct FFragmentMaterialInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	FString Name;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	FString LayerSetName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	float Thickness = 0.f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	int64 LocalId = -1;
+};
+
+/** One classification reference reached from HasAssociations. */
+USTRUCT(BlueprintType)
+struct FFragmentClassificationInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	FString Identification;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	FString Name;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	FString Category;
 };
 
 USTRUCT(BlueprintType)
@@ -361,6 +410,18 @@ struct FFragmentElementDetail
 	/** Same property-set attributes pre-grouped by set name (first-seen order). */
 	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
 	TArray<FFragmentPropertySetGroup> PropertySetGroups;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	TArray<FFragmentMaterialInfo> Materials;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	TArray<FFragmentClassificationInfo> Classifications;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	FString TypeName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Fragment")
+	int64 TypeLocalId = -1;
 
 	FFragmentElementDetail() = default;
 };

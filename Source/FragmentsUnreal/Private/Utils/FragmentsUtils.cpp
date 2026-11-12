@@ -4,6 +4,7 @@
 
 
 #include "Utils/FragmentsUtils.h"
+#include "Utils/FragmentTupleParser.h"
 #include "Utils/FragmentsLog.h"
 #include "Fragment/Fragment.h"
 
@@ -141,19 +142,25 @@ TArray<FItemAttribute> UFragmentsUtils::ParseItemAttribute(const Attribute* Attr
 		const auto* Raw = Attr->data()->Get(i);
 		if (!Raw) continue;
 
-		FString RawString = UTF8_TO_TCHAR(Raw->c_str());
+		if (Raw->size() > static_cast<uint32>(UE::Fragments::Tuple::MaxTupleBytes))
+		{
+			continue;
+		}
+		if (Parsed.Num() >= 256)
+		{
+			break;
+		}
 
 		TArray<FString> Tokens;
-		RawString.Replace(TEXT("["), TEXT(""))
-			.Replace(TEXT("]"), TEXT(""))
-			.ParseIntoArray(Tokens, TEXT(","), true);
+		UE::Fragments::Tuple::SplitTuple(FString(UTF8_TO_TCHAR(Raw->c_str())), Tokens);
+		if (Tokens.Num() < 3)
+		{
+			continue;
+		}
 
-		if (Tokens.Num() < 3) continue;
-
-		FString Key = Tokens[0].TrimStartAndEnd().Replace(TEXT("\""), TEXT(""));
-		FString Value = Tokens[1].TrimStartAndEnd().Replace(TEXT("\""), TEXT(""));
-		int64 TypeHash = FCString::Atoi(*Tokens[2].TrimStartAndEnd());
-
+		const FString Key = Tokens[0].Left(256);
+		const FString Value = Tokens[1].Left(4096);
+		const int64 TypeHash = FCString::Atoi64(*Tokens[2]);
 		Parsed.Add(FItemAttribute(Key, Value, TEXT(""), TypeHash));
 	}
 	return Parsed;

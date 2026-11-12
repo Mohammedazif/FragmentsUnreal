@@ -45,6 +45,43 @@ void UFragmentModelWrapper::ResetWrapper()
 
 	LocalIdToFlatIndex.Empty();
 	LocalIdToItem.Empty();
+	ClearRelationIndex();
+}
+
+void UFragmentModelWrapper::ClearRelationIndex()
+{
+	LocalIdToRelationRows.Empty();
+	bRelationIndexReady = false;
+}
+
+void UFragmentModelWrapper::EnsureRelationIndex()
+{
+	if (bRelationIndexReady)
+	{
+		return;
+	}
+	bRelationIndexReady = true;
+	if (!ParsedModel || !ParsedModel->relations() || !ParsedModel->relations_items())
+	{
+		return;
+	}
+	const auto* Relations = ParsedModel->relations();
+	const auto* Owners = ParsedModel->relations_items();
+	const flatbuffers::uoffset_t Count = FMath::Min(Relations->size(), Owners->size());
+	for (flatbuffers::uoffset_t Row = 0; Row < Count; ++Row)
+	{
+		const int32 Owner = Owners->Get(Row);
+		if (Owner < 0)
+		{
+			continue;
+		}
+		LocalIdToRelationRows.FindOrAdd(static_cast<int64>(Owner)).Add(static_cast<int32>(Row));
+	}
+}
+
+const TArray<int32>* UFragmentModelWrapper::FindRelationRows(int64 LocalId) const
+{
+	return LocalIdToRelationRows.Find(LocalId);
 }
 
 int64 UFragmentModelWrapper::GetFlatIndexForLocalId(int64 LocalId)

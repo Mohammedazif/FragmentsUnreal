@@ -9,6 +9,7 @@ notices remain with the corresponding source files:
 * FlatBuffers is included under its upstream license and notices where
   applicable. See ThirdParty/FlatBuffers.
 * zlib is provided by and licensed through the Unreal Engine installation.
+* Portions of the IFC property, material and classification walk are adapted from FragmentsUE (https://github.com/Mohammedazif/FragmentsUE), Copyright (c) 2026 Mohammed Azif, contributed by the author.
 
 The Apache License in the root LICENSE file applies to original FragmentsUnreal
 code, documentation, and project-authored assets unless a file or directory
